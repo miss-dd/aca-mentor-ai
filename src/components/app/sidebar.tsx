@@ -11,6 +11,7 @@ import {
   GraduationCap,
   Menu,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
@@ -80,6 +81,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="text-xs text-muted-foreground truncate">{user?.studentId}</div>
             </div>
           </div>
+          {user?.role === "admin" && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+            >
+              <ShieldCheck className="h-4 w-4 shrink-0 text-brand" />
+              <span>Admin Panel</span>
+            </Link>
+          )}
           <Button variant="ghost" size="sm" className="w-full justify-start mt-1" onClick={handleLogout}>
             <LogOut className="h-4 w-4 mr-2" /> Sign Out
           </Button>
@@ -153,6 +163,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               })}
             </nav>
             <div className="border-t p-3">
+              {user?.role === "admin" && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                >
+                  <ShieldCheck className="h-4 w-4 text-brand" />
+                  <span>Admin Panel</span>
+                </Link>
+              )}
               <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" /> Sign Out
               </Button>

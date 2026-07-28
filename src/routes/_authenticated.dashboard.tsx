@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -11,6 +11,7 @@ import {
   ScrollText,
   ThumbsUp,
   Wallet,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
@@ -39,16 +40,33 @@ function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [question, setQuestion] = useState("");
-  const [recent, setRecent] = useState<Conversation[]>([]);
+  const [allConvs, setAllConvs] = useState<Conversation[]>([]);
 
   useEffect(() => {
-    conversationService.list().then((r) => r.success && setRecent(r.data.slice(0, 3)));
+    conversationService.list().then((r) => r.success && setAllConvs(r.data));
   }, []);
+
+  const recent = useMemo(() => allConvs.slice(0, 3), [allConvs]);
 
   const ask = async () => {
     if (!question.trim()) return;
     navigate({ to: "/support", search: { q: question } as never });
   };
+
+  // Derive stats from real conversation data
+  const totalMessages = useMemo(
+    () => allConvs.reduce((acc, c) => acc + c.messages.filter((m) => m.role === "user").length, 0),
+    [allConvs],
+  );
+  const savedCount = useMemo(() => allConvs.filter((c) => c.saved).length, [allConvs]);
+  const helpfulCount = useMemo(
+    () =>
+      allConvs.reduce(
+        (acc, c) => acc + c.messages.filter((m) => m.feedback === "helpful").length,
+        0,
+      ),
+    [allConvs],
+  );
 
   const cats = [
     { label: "Registration", icon: BookOpen },
@@ -57,10 +75,10 @@ function DashboardPage() {
     { label: "Graduation", icon: GraduationCap },
   ];
   const stats = [
-    { label: "Questions Asked", value: "12", icon: MessageSquare },
-    { label: "This Month", value: "8", icon: ClipboardList },
-    { label: "Helpful Responses", value: "10", icon: ThumbsUp },
-    { label: "Saved Answers", value: "3", icon: Bookmark },
+    { label: "Questions Asked", value: totalMessages, icon: MessageSquare },
+    { label: "Conversations", value: allConvs.length, icon: ClipboardList },
+    { label: "Helpful Responses", value: helpfulCount, icon: ThumbsUp },
+    { label: "Saved Answers", value: savedCount, icon: Bookmark },
   ];
 
   return (
@@ -71,6 +89,23 @@ function DashboardPage() {
         </h1>
         <p className="mt-1 text-muted-foreground">What would you like help with today?</p>
       </header>
+
+      {/* Admin shortcut */}
+      {user?.role === "admin" && (
+        <Link
+          to="/admin"
+          className="surface-card p-4 flex items-center gap-3 hover:border-brand/40 hover:shadow-elevated transition bg-brand/5 border-brand/20"
+        >
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-brand/10 text-brand">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-sm">Admin Panel</div>
+            <div className="text-xs text-muted-foreground">Manage queries, knowledge base, and analytics</div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
+      )}
 
       <section className="surface-card p-5 md:p-6">
         <label htmlFor="ask" className="text-sm font-medium">

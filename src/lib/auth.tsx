@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       program: "Bachelor of Science",
       department: "Computer Science",
       level: "Year 3",
-      role: "student",
+      role: email.toLowerCase().startsWith("admin") ? "admin" : "student",
     };
     setUser(u);
     persist(u);

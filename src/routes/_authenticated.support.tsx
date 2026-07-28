@@ -1,4 +1,4 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Send,
@@ -11,9 +11,14 @@ import {
   Info,
   Plus,
   BookOpen,
+  History,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { conversationService } from "@/services/conversation.service";
+import { feedbackService } from "@/services/feedback.service";
 import { SAMPLE_PROMPTS } from "@/lib/mock-data";
 import type { Conversation, Message } from "@/types";
 import { toast } from "sonner";
@@ -36,13 +41,13 @@ function SupportPage() {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<"idle" | "searching" | "responding">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [lastInput, setLastInput] = useState("");
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (q) {
-      setInput("");
-      void send(q);
-    }
+    if (q) { setInput(""); void send(q); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
@@ -54,6 +59,7 @@ function SupportPage() {
     const trimmed = text.trim();
     if (!trimmed || status !== "idle") return;
     setError(null);
+    setLastInput(trimmed);
 
     let conv = conversation;
     if (!conv) {
@@ -72,15 +78,12 @@ function SupportPage() {
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setStatus("searching");
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 600));
     setStatus("responding");
 
     const r = await conversationService.sendMessage(conv.id, trimmed);
     setStatus("idle");
-    if (!r.success) {
-      setError(r.error.message);
-      return;
-    }
+    if (!r.success) { setError(r.error.message); return; }
     setMessages((m) => [
       ...m.filter((x) => x.id !== userMsg.id),
       r.data.userMessage,
@@ -88,32 +91,82 @@ function SupportPage() {
     ]);
   };
 
+  const retry = () => { if (lastInput) void send(lastInput); };
+
   const startNew = () => {
     setConversation(null);
     setMessages([]);
     setError(null);
     setInput("");
+    setLastInput("");
+  };
+
+  const saveRename = async () => {
+    if (!conversation || !titleDraft.trim()) { setEditingTitle(false); return; }
+    await conversationService.rename(conversation.id, titleDraft.trim());
+    setConversation((c) => c ? { ...c, title: titleDraft.trim() } : c);
+    setEditingTitle(false);
+    toast.success("Conversation renamed");
+  };
+
+  const startEditTitle = () => {
+    setTitleDraft(conversation?.title ?? "");
+    setEditingTitle(true);
   };
 
   return (
     <div className="flex flex-col h-[calc(100dvh-8rem)] lg:h-[calc(100dvh-6rem)]">
+      {/* Header */}
       <header className="flex items-start justify-between gap-3 pb-4 border-b">
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl gradient-brand text-brand-foreground">
             <Sparkles className="h-5 w-5" />
           </div>
-          <div className="min-w-0">
-            <div className="font-semibold truncate">AI Academic Assistant</div>
-            <div className="text-xs text-success inline-flex items-center gap-1.5">
+          <div className="min-w-0 flex-1">
+            {conversation && editingTitle ? (
+              <div className="flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setEditingTitle(false); }}
+                  className="flex-1 text-sm font-semibold bg-transparent border-b border-brand outline-none"
+                />
+                <button onClick={saveRename} aria-label="Save title" className="p-1 text-success hover:text-success/80"><Check className="h-3.5 w-3.5" /></button>
+                <button onClick={() => setEditingTitle(false)} aria-label="Cancel" className="p-1 text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="font-semibold truncate">
+                  {conversation ? conversation.title : "AI Academic Assistant"}
+                </div>
+                {conversation && (
+                  <button onClick={startEditTitle} aria-label="Rename conversation" className="shrink-0 p-1 text-muted-foreground hover:text-foreground">
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="text-xs text-success inline-flex items-center gap-1.5 mt-0.5">
               <span className="h-1.5 w-1.5 rounded-full bg-success" /> Online and ready to help
             </div>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={startNew}>
-          <Plus className="h-4 w-4 mr-2" /> New conversation
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          {conversation && (
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/conversations">
+                <History className="h-4 w-4 mr-2" /> History
+              </Link>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={startNew}>
+            <Plus className="h-4 w-4 mr-2" /> New
+          </Button>
+        </div>
       </header>
 
+      {/* Safety notice */}
       <div className="rounded-md bg-accent/60 border mt-4 p-3 flex gap-2 text-xs text-accent-foreground">
         <Info className="h-4 w-4 shrink-0 text-brand mt-0.5" />
         <span>
@@ -122,21 +175,27 @@ function SupportPage() {
         </span>
       </div>
 
+      {/* Messages */}
       <div ref={scroller} className="flex-1 overflow-y-auto py-6 space-y-6">
-        {messages.length === 0 && (
-          <EmptyState onPick={(p) => setInput(p)} />
-        )}
+        {messages.length === 0 && <EmptyState onPick={(p) => setInput(p)} />}
         {messages.map((m) =>
-          m.role === "user" ? <UserBubble key={m.id} msg={m} /> : <AiBubble key={m.id} msg={m} onSuggest={send} />,
+          m.role === "user"
+            ? <UserBubble key={m.id} msg={m} />
+            : <AiBubble key={m.id} msg={m} conversationId={conversation?.id} onSuggest={send} />,
         )}
-        {status !== "idle" && <ThinkingBubble label={status === "searching" ? "Searching academic information…" : "Preparing your response…"} />}
+        {status !== "idle" && (
+          <ThinkingBubble label={status === "searching" ? "Searching academic information…" : "Preparing your response…"} />
+        )}
         {error && (
           <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
             <div className="font-medium text-destructive">Something went wrong</div>
             <p className="mt-1 text-muted-foreground">{error}</p>
-            <Button size="sm" variant="outline" className="mt-3" onClick={() => setError(null)}>
-              <RefreshCw className="h-3.5 w-3.5 mr-2" /> Try again
-            </Button>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" variant="outline" onClick={retry}>
+                <RefreshCw className="h-3.5 w-3.5 mr-2" /> Retry
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setError(null)}>Dismiss</Button>
+            </div>
           </div>
         )}
       </div>
@@ -161,7 +220,7 @@ function EmptyState({ onPick }: { onPick: (p: string) => void }) {
           <button
             key={p}
             onClick={() => onPick(p)}
-            className="surface-card p-3 text-sm hover:border-brand/40 transition"
+            className="surface-card p-3 text-sm text-left hover:border-brand/40 transition"
           >
             {p}
           </button>
@@ -181,12 +240,26 @@ function UserBubble({ msg }: { msg: Message }) {
   );
 }
 
-function AiBubble({ msg, onSuggest }: { msg: Message; onSuggest: (t: string) => void }) {
+function AiBubble({
+  msg,
+  conversationId,
+  onSuggest,
+}: {
+  msg: Message;
+  conversationId?: string;
+  onSuggest: (t: string) => void;
+}) {
   const [feedback, setFeedback] = useState<"helpful" | "not_helpful" | null>(msg.feedback ?? null);
 
-  const copy = () => {
-    navigator.clipboard.writeText(msg.content);
-    toast.success("Copied");
+  const copy = () => { navigator.clipboard.writeText(msg.content); toast.success("Copied"); };
+
+  const submitFeedback = async (rating: "helpful" | "not_helpful") => {
+    setFeedback(rating);
+    if (conversationId) {
+      await feedbackService.submit({ conversationId, messageId: msg.id, rating });
+      await conversationService.setFeedback(conversationId, msg.id, rating);
+    }
+    toast.success(rating === "helpful" ? "Thanks for the feedback!" : "We'll work to improve this.");
   };
 
   return (
@@ -195,7 +268,7 @@ function AiBubble({ msg, onSuggest }: { msg: Message; onSuggest: (t: string) => 
         <Sparkles className="h-4 w-4" />
       </div>
       <div className="max-w-[85%] min-w-0 space-y-3">
-        <div className="rounded-2xl rounded-tl-sm bg-muted/60 border px-4 py-3 text-sm whitespace-pre-wrap">
+        <div className="rounded-2xl rounded-tl-sm bg-muted/60 border px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed">
           {msg.content}
         </div>
         {msg.sources && msg.sources.length > 0 && (
@@ -206,7 +279,7 @@ function AiBubble({ msg, onSuggest }: { msg: Message; onSuggest: (t: string) => 
                 className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground"
               >
                 <BookOpen className="h-3 w-3 text-brand" /> {s.title}
-                <span className="text-muted-foreground/70">· {s.reference}</span>
+                <span className="text-muted-foreground/60">· {s.reference}</span>
               </span>
             ))}
           </div>
@@ -217,32 +290,24 @@ function AiBubble({ msg, onSuggest }: { msg: Message; onSuggest: (t: string) => 
               <button
                 key={s}
                 onClick={() => onSuggest(s)}
-                className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-brand/40"
+                className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-brand/40 transition"
               >
                 {s}
               </button>
             ))}
           </div>
         )}
-        <div className="flex items-center gap-1 text-muted-foreground">
-          <IconBtn
-            onClick={() => setFeedback("helpful")}
-            active={feedback === "helpful"}
-            label="Helpful"
-          >
+        <div className="flex items-center gap-1">
+          <IconBtn onClick={() => submitFeedback("helpful")} active={feedback === "helpful"} label="Helpful">
             <ThumbsUp className="h-3.5 w-3.5" />
           </IconBtn>
-          <IconBtn
-            onClick={() => setFeedback("not_helpful")}
-            active={feedback === "not_helpful"}
-            label="Not helpful"
-          >
+          <IconBtn onClick={() => submitFeedback("not_helpful")} active={feedback === "not_helpful"} label="Not helpful">
             <ThumbsDown className="h-3.5 w-3.5" />
           </IconBtn>
-          <IconBtn onClick={copy} label="Copy">
+          <IconBtn onClick={copy} label="Copy response">
             <Copy className="h-3.5 w-3.5" />
           </IconBtn>
-          <IconBtn onClick={() => toast.success("Saved")} label="Save">
+          <IconBtn onClick={() => toast.success("Answer saved to conversation")} label="Save answer">
             <Bookmark className="h-3.5 w-3.5" />
           </IconBtn>
         </div>
@@ -269,7 +334,7 @@ function IconBtn({
       aria-label={label}
       title={label}
       className={`inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition ${
-        active ? "text-brand bg-brand/10" : ""
+        active ? "text-brand bg-brand/10" : "text-muted-foreground"
       }`}
     >
       {children}
@@ -307,6 +372,7 @@ function Composer({
   disabled: boolean;
 }) {
   const max = 1000;
+  const pct = input.length / max;
   return (
     <div className="border-t pt-3">
       <div className="rounded-xl border bg-card focus-within:ring-2 focus-within:ring-ring">
@@ -314,19 +380,30 @@ function Composer({
           value={input}
           onChange={(e) => setInput(e.target.value.slice(0, max))}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onSend();
-            }
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); }
           }}
           placeholder="Ask a question about registration, fees, examinations, graduation, or campus services…"
           rows={2}
-          className="w-full resize-none bg-transparent px-4 py-3 text-sm outline-none max-h-40"
+          disabled={disabled}
+          className="w-full resize-none bg-transparent px-4 py-3 text-sm outline-none max-h-40 disabled:opacity-50"
         />
         <div className="flex items-center justify-between gap-2 px-3 pb-2">
-          <span className="text-xs text-muted-foreground">
-            {input.length}/{max} · Press Enter to send · Shift+Enter for a new line
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {input.length}/{max}
+            </span>
+            {input.length > 0 && (
+              <div className="h-1 w-16 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${pct > 0.9 ? "bg-destructive" : "bg-brand"}`}
+                  style={{ width: `${pct * 100}%` }}
+                />
+              </div>
+            )}
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Enter to send · Shift+Enter for new line
+            </span>
+          </div>
           <Button onClick={onSend} disabled={disabled || !input.trim()} size="sm">
             <Send className="h-4 w-4 mr-2" /> Send
           </Button>

@@ -1,4 +1,15 @@
-import type { Category, Conversation, FAQ, Resource } from "@/types";
+import type {
+  Category,
+  Conversation,
+  FAQ,
+  Resource,
+  AnalyticsSummary,
+  StudentQuery,
+  KnowledgeDoc,
+  AdminUser,
+  SystemStatus,
+  FeedbackEntry,
+} from "@/types";
 
 export const CATEGORY_LABEL: Record<Category, string> = {
   admissions: "Admissions",
@@ -285,3 +296,264 @@ export function generateAiResponse(question: string): {
     suggestions: suggestions[category],
   };
 }
+
+// ── Admin mock data ────────────────────────────────────────────────────────
+
+export const mockAnalytics: AnalyticsSummary = {
+  totalQuestions: 1284,
+  questionsToday: 47,
+  aiResponseRate: 94,
+  avgResponseTimeMs: 3200,
+  avgFeedbackRating: 4.2,
+  questionsOverTime: [
+    { date: "Jul 14", count: 38 },
+    { date: "Jul 15", count: 52 },
+    { date: "Jul 16", count: 41 },
+    { date: "Jul 17", count: 60 },
+    { date: "Jul 18", count: 55 },
+    { date: "Jul 19", count: 33 },
+    { date: "Jul 20", count: 47 },
+  ],
+  byCategory: [
+    { category: "registration", count: 312 },
+    { category: "fees", count: 228 },
+    { category: "examinations", count: 195 },
+    { category: "graduation", count: 167 },
+    { category: "admissions", count: 142 },
+    { category: "support", count: 130 },
+    { category: "calendar", count: 110 },
+  ],
+  topTopics: [
+    { topic: "Course registration deadline", count: 98 },
+    { topic: "Tuition payment plans", count: 87 },
+    { topic: "Exam schedule", count: 76 },
+    { topic: "Graduation application", count: 65 },
+    { topic: "Transcript request", count: 54 },
+  ],
+  satisfactionTrend: [
+    { date: "Jul 14", rating: 4.0 },
+    { date: "Jul 15", rating: 4.1 },
+    { date: "Jul 16", rating: 4.3 },
+    { date: "Jul 17", rating: 4.2 },
+    { date: "Jul 18", rating: 4.4 },
+    { date: "Jul 19", rating: 4.1 },
+    { date: "Jul 20", rating: 4.2 },
+  ],
+};
+
+export const mockQueries: StudentQuery[] = [
+  {
+    id: "q-001",
+    studentId: "STU-2026-0042",
+    studentName: "Alex Johnson",
+    question: "How do I appeal a failed examination result?",
+    category: "examinations",
+    status: "open",
+    feedback: null,
+    createdAt: "2026-07-20T08:30:00Z",
+    aiResponse:
+      "To appeal an examination result, submit a formal appeal form to the Examinations Office within 14 days of the result publication. Include your student ID, course code, and grounds for appeal.",
+  },
+  {
+    id: "q-002",
+    studentId: "STU-2026-0118",
+    studentName: "Maria Santos",
+    question: "My tuition payment was declined but the amount was deducted.",
+    category: "fees",
+    status: "escalated",
+    feedback: "not_helpful",
+    createdAt: "2026-07-19T14:15:00Z",
+    aiResponse:
+      "Payment processing issues should be reported to the Bursar's Office with your transaction reference number.",
+  },
+  {
+    id: "q-003",
+    studentId: "STU-2026-0205",
+    studentName: "David Osei",
+    question: "When does course registration open for the next semester?",
+    category: "registration",
+    status: "resolved",
+    feedback: "helpful",
+    createdAt: "2026-07-18T10:00:00Z",
+    resolvedAt: "2026-07-18T10:01:00Z",
+    aiResponse:
+      "Registration for the upcoming semester opens two weeks before the term begins. Check the Academic Calendar for exact dates.",
+  },
+  {
+    id: "q-004",
+    studentId: "STU-2026-0311",
+    studentName: "Priya Nair",
+    question: "What are the requirements to apply for graduation this year?",
+    category: "graduation",
+    status: "resolved",
+    feedback: "helpful",
+    createdAt: "2026-07-17T09:45:00Z",
+    resolvedAt: "2026-07-17T09:46:00Z",
+    aiResponse:
+      "To apply for graduation, verify all credits, GPA, and outstanding balances. Submit the graduation application at least one semester before your intended graduation term.",
+  },
+  {
+    id: "q-005",
+    studentId: "STU-2026-0089",
+    studentName: "James Mensah",
+    question: "How do I get a letter of enrollment for my visa application?",
+    category: "admissions",
+    status: "pending",
+    feedback: null,
+    createdAt: "2026-07-20T11:00:00Z",
+    aiResponse:
+      "Enrollment letters can be requested through the Registrar's Office. Allow 3–5 business days for processing.",
+  },
+];
+
+export const mockKnowledgeDocs: KnowledgeDoc[] = [
+  {
+    id: "kd-1",
+    title: "Student Handbook 2026",
+    description: "Comprehensive guide to student rights, responsibilities, and services.",
+    category: "policies",
+    fileType: "PDF",
+    uploadedAt: "2026-05-01",
+    updatedAt: "2026-05-12",
+    status: "active",
+    size: "2.4 MB",
+  },
+  {
+    id: "kd-2",
+    title: "Academic Calendar 2026-2027",
+    description: "Term dates, holidays, and important academic deadlines.",
+    category: "calendar",
+    fileType: "PDF",
+    uploadedAt: "2026-06-01",
+    updatedAt: "2026-06-01",
+    status: "active",
+    size: "512 KB",
+  },
+  {
+    id: "kd-3",
+    title: "Course Registration Guide",
+    description: "Step-by-step instructions for registering, adding, and dropping courses.",
+    category: "registration",
+    fileType: "PDF",
+    uploadedAt: "2026-06-10",
+    updatedAt: "2026-06-15",
+    status: "active",
+    size: "1.1 MB",
+  },
+  {
+    id: "kd-4",
+    title: "Examination Regulations",
+    description: "Rules, conduct, and procedures for scheduled examinations.",
+    category: "examinations",
+    fileType: "PDF",
+    uploadedAt: "2026-05-20",
+    updatedAt: "2026-05-30",
+    status: "active",
+    size: "890 KB",
+  },
+  {
+    id: "kd-5",
+    title: "Tuition and Fee Schedule 2025-2026",
+    description: "Previous year tuition rates — archived for reference.",
+    category: "fees",
+    fileType: "PDF",
+    uploadedAt: "2025-08-01",
+    updatedAt: "2025-08-01",
+    status: "archived",
+    size: "340 KB",
+  },
+];
+
+export const mockAdminUsers: AdminUser[] = [
+  {
+    id: "u-admin-1",
+    name: "Dr. Sarah Owusu",
+    email: "s.owusu@institution.edu",
+    role: "admin",
+    status: "active",
+    createdAt: "2025-09-01",
+    lastLogin: "2026-07-20T08:00:00Z",
+  },
+  {
+    id: "u-stu-1",
+    name: "Alex Johnson",
+    email: "a.johnson@institution.edu",
+    role: "student",
+    studentId: "STU-2026-0042",
+    status: "active",
+    createdAt: "2026-01-15",
+    lastLogin: "2026-07-20T08:30:00Z",
+  },
+  {
+    id: "u-stu-2",
+    name: "Maria Santos",
+    email: "m.santos@institution.edu",
+    role: "student",
+    studentId: "STU-2026-0118",
+    status: "active",
+    createdAt: "2026-01-15",
+    lastLogin: "2026-07-19T14:00:00Z",
+  },
+  {
+    id: "u-stu-3",
+    name: "David Osei",
+    email: "d.osei@institution.edu",
+    role: "student",
+    studentId: "STU-2026-0205",
+    status: "suspended",
+    createdAt: "2026-01-15",
+    lastLogin: "2026-07-10T09:00:00Z",
+  },
+];
+
+export const mockSystemStatus: SystemStatus[] = [
+  { service: "AI Response Engine", status: "operational", latencyMs: 3200 },
+  { service: "Student Authentication", status: "operational", latencyMs: 120 },
+  { service: "Conversation Storage", status: "operational", latencyMs: 45 },
+  { service: "Knowledge Base", status: "operational", latencyMs: 210 },
+  { service: "Email Notifications", status: "degraded", note: "Slight delays observed" },
+  { service: "File Storage", status: "operational", latencyMs: 88 },
+];
+
+export const mockFeedback: FeedbackEntry[] = [
+  {
+    id: "fb-1",
+    conversationId: "c-001",
+    messageId: "m-2",
+    studentId: "STU-2026-0042",
+    rating: "helpful",
+    category: "registration",
+    createdAt: "2026-07-20T09:12:00Z",
+    question: "When is the deadline for course registration this semester?",
+  },
+  {
+    id: "fb-2",
+    conversationId: "c-002",
+    messageId: "m-4",
+    studentId: "STU-2026-0118",
+    rating: "helpful",
+    category: "graduation",
+    createdAt: "2026-07-18T14:03:00Z",
+    question: "What do I need to check before applying to graduate?",
+  },
+  {
+    id: "fb-3",
+    conversationId: "c-003",
+    messageId: "m-6",
+    studentId: "STU-2026-0205",
+    rating: "not_helpful",
+    category: "fees",
+    createdAt: "2026-07-15T10:44:00Z",
+    question: "What payment plans are available for tuition?",
+  },
+  {
+    id: "fb-4",
+    conversationId: "c-004",
+    messageId: "m-8",
+    studentId: "STU-2026-0311",
+    rating: "helpful",
+    category: "examinations",
+    createdAt: "2026-07-14T11:20:00Z",
+    question: "How do I request a re-mark for my exam?",
+  },
+];
